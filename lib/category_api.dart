@@ -5,7 +5,8 @@ import 'package:fnt_back/screens/category_screen.dart'; // Import the Category m
 
 class ApiServiceCategory {
   // Replace this with your API URL
-  final String baseUrl = '192.168.95.194';
+  final String baseUrl = '192.168.9.194';
+  // final String baseUrl = '192.168.165.194';
   final int port = 9000;
 
   // Fetch categories from the API
@@ -24,7 +25,7 @@ class ApiServiceCategory {
 
       log('Response Status: ${response.statusCode}');
       log('Response Body: ${response.body}');
-
+      print('cate ${response.statusCode}. ${response.body}');
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         final List<dynamic> categoriesData = responseData['categories'];
@@ -59,17 +60,18 @@ class ApiServiceCategory {
         headers: {'Content-Type': 'application/json'},
         body: json.encode(category.toJson()),
       );
-
+      print('response ===${response.statusCode} =${response.body}');
       if (response.statusCode != 201) {
         throw Exception('Failed to add category');
       }
     } catch (e) {
+      print('Error=========== $e');
       throw Exception('Failed to add category: $e');
     }
   }
 
   // Update an existing category
-  Future<void> updateCategory(String id, Category category) async {
+  Future<bool> updateCategory(String id, Category category) async {
     try {
       final Uri uri = Uri(
         host: baseUrl,
@@ -90,19 +92,19 @@ class ApiServiceCategory {
       log('Response Status: ${response.statusCode}');
       log('Response Body: ${response.body}');
 
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Failed to update product. Server returned: ${response.body}');
+      if (response.statusCode == 201) {
+        return true;
+      } else {
+        return false;
       }
     } catch (e) {
-      log('Error updating product: $e');
-      rethrow;
+      return false;
     }
   }
 
   // Delete a category by ID
 
-  Future<void> deleteCategory(String id) async {
+  Future<bool> deleteCategory(String id) async {
     try {
       final Uri uri = Uri(
         host: baseUrl,
@@ -117,13 +119,13 @@ class ApiServiceCategory {
       log('Response Status: ${response.statusCode}');
       log('Response Body: ${response.body}');
 
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Failed to delete product. Server returned: ${response.body}');
+      if (response.statusCode == 201) {
+        return true;
+      } else {
+        return false;
       }
     } catch (e) {
-      log('Error deleting product: $e');
-      rethrow;
+      return false;
     }
   }
 }

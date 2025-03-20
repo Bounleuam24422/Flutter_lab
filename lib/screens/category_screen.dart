@@ -36,6 +36,7 @@ class CategoryScreen extends StatefulWidget {
 class _CategoryScreenState extends State<CategoryScreen> {
   List<Category> categories = [];
   final ApiServiceCategory apiServiceCategory = ApiServiceCategory();
+  final TextEditingController _controller = TextEditingController();
 
   @override
   void initState() {
@@ -61,13 +62,35 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
   void _updateCategory(String id, Category updatedCategory) async {
-    await apiServiceCategory.updateCategory(id, updatedCategory);
-    loadCategories();
+    bool update = await apiServiceCategory.updateCategory(id, updatedCategory);
+    if (update) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Update Success...',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+      loadCategories();
+    }
   }
 
   void _deleteCategory(String id) async {
-    await apiServiceCategory.deleteCategory(id);
-    await loadCategories();
+    bool deleteCategory = await apiServiceCategory.deleteCategory(id);
+    if (deleteCategory) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.green,
+          content: Text(
+            'Delete Success...',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+      await loadCategories();
+    }
   }
 
   void _showAddEditDialog({Category? category}) {
@@ -90,23 +113,39 @@ class _CategoryScreenState extends State<CategoryScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final String cateName = categoryNameController.text.trim();
+                final filter = categories.where((item) =>
+                    item.cateName == categoryNameController.text.trim());
+                if (filter.isEmpty) {
+                  final String cateName = categoryNameController.text.trim();
+                  if (cateName.isNotEmpty) {
+                    final Category newCategory = Category(
+                      id: category?.id ?? '',
+                      cateName: cateName,
+                    );
 
-                if (cateName.isNotEmpty) {
-                  final Category newCategory = Category(
-                    id: category?.id ?? '',
-                    cateName: cateName,
-                  );
-
-                  if (category == null) {
-                    _addCategory(newCategory);
-                  } else {
-                    _updateCategory(category.id, newCategory);
+                    if (category == null) {
+                      _addCategory(newCategory);
+                    } else {
+                      _updateCategory(category.id, newCategory);
+                    }
                   }
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: Colors.red,
+                      content: Text(
+                        'Already have Category',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  );
                 }
-                Navigator.pop(context);
               },
-              child: Text(category == null ? 'Add' : 'Save'),
+              child: Text(category == null ? 'Add' : 'Edit'),
             ),
           ],
         );
@@ -120,33 +159,64 @@ class _CategoryScreenState extends State<CategoryScreen> {
       appBar: AppBar(title: const Text('Category List')),
       body: categories.isEmpty
           ? const Center(child: Text('No categories added yet!'))
-          : ListView.builder(
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: ListTile(
-                    title: Text(category.cateName,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () =>
-                              _showAddEditDialog(category: category),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteCategory(category.id),
-                        ),
-                      ],
-                    ),
+          : Column(
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 40),
+                  child: TextField(
+                    controller: _controller,
+                    onChanged: (value) {
+                      setState(() {});
+                    },
                   ),
-                );
-              },
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: categories.length,
+                    itemBuilder: (context, index) {
+                      final category = categories[index];
+                      return _controller.text.isEmpty ||
+                              category.cateName
+                                  .toUpperCase()
+                                  .contains(_controller.text.toUpperCase())
+                          ? Card(
+                              margin: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 16),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('${category.cateName}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          onPressed: () {
+                                            _showAddEditDialog(
+                                                category: category);
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete),
+                                          onPressed: () =>
+                                              _deleteCategory(category.id),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : const SizedBox();
+                    },
+                  ),
+                ),
+              ],
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditDialog(),

@@ -35,7 +35,8 @@ class UnitScreen extends StatefulWidget {
 
 class _UnitScreenState extends State<UnitScreen> {
   List<Unit> units = [];
-  final ApiService apiService = ApiService();
+  final UnitService apiService = UnitService();
+  final TextEditingController _controller = TextEditingController();
 
   @override
   void initState() {
@@ -60,13 +61,35 @@ class _UnitScreenState extends State<UnitScreen> {
   }
 
   void _updateUnit(String id, Unit updatedUnit) async {
-    await apiService.updateUnit(id, updatedUnit);
-    loadUnits();
+    bool updateUnit = await apiService.updateUnit(id, updatedUnit);
+    if (updateUnit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Update Success...',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+      loadUnits();
+    }
   }
 
   void _deleteUnit(String id) async {
-    await apiService.deleteUnit(id);
-    await loadUnits();
+    bool deleteUnit = await apiService.deleteUnit(id);
+    if (deleteUnit) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: Colors.green,
+          content: Text(
+            'Delete Success...',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+      await loadUnits();
+    }
   }
 
   void _showAddEditDialog({Unit? unit}) {
@@ -89,23 +112,39 @@ class _UnitScreenState extends State<UnitScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final String unitName = unitNameController.text.trim();
+                final filter = units.where(
+                    (item) => item.unitName == unitNameController.text.trim());
+                if (filter.isEmpty) {
+                  final String unitName = unitNameController.text.trim();
+                  if (unitName.isNotEmpty) {
+                    final Unit newUnit = Unit(
+                      id: unit?.id ?? '',
+                      unitName: unitName,
+                    );
 
-                if (unitName.isNotEmpty) {
-                  final Unit newUnit = Unit(
-                    id: unit?.id ?? '',
-                    unitName: unitName,
-                  );
-
-                  if (unit == null) {
-                    _addUnit(newUnit);
-                  } else {
-                    _updateUnit(unit.id, newUnit);
+                    if (unit == null) {
+                      _addUnit(newUnit);
+                    } else {
+                      _updateUnit(unit.id, newUnit);
+                    }
                   }
+                  Navigator.pop(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: Colors.red,
+                      content: Text(
+                        'Already have Unit',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  );
                 }
-                Navigator.pop(context);
               },
-              child: Text(unit == null ? 'Add' : 'Save'),
+              child: Text(unit == null ? 'Add' : 'Edit'),
             ),
           ],
         );
@@ -119,32 +158,62 @@ class _UnitScreenState extends State<UnitScreen> {
       appBar: AppBar(title: const Text('Unit List')),
       body: units.isEmpty
           ? const Center(child: Text('No units added yet!'))
-          : ListView.builder(
-              itemCount: units.length,
-              itemBuilder: (context, index) {
-                final unit = units[index];
-                return Card(
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: ListTile(
-                    title: Text(unit.unitName,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _showAddEditDialog(unit: unit),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () => _deleteUnit(unit.id),
-                        ),
-                      ],
-                    ),
+          : Column(
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 10, horizontal: 40),
+                  child: TextField(
+                    controller: _controller,
+                    onChanged: (value) {
+                      setState(() {});
+                    },
                   ),
-                );
-              },
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: units.length,
+                    itemBuilder: (context, index) {
+                      final unit = units[index];
+                      return _controller.text.isEmpty ||
+                              unit.unitName
+                                  .toUpperCase()
+                                  .contains(_controller.text.toUpperCase())
+                          ? Card(
+                              margin: const EdgeInsets.symmetric(
+                                  vertical: 8, horizontal: 16),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('${unit.unitName}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit),
+                                          onPressed: () {
+                                            _showAddEditDialog(unit: unit);
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete),
+                                          onPressed: () => _deleteUnit(unit.id),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : const SizedBox();
+                    },
+                  ),
+                ),
+              ],
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddEditDialog(),

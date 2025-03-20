@@ -3,8 +3,9 @@ import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'package:fnt_back/screens/unit_screen.dart'; // Import the Unit model
 
-class ApiService {
-  final String baseUrl = '192.168.95.194'; // Replace with your API endpoint
+class UnitService {
+  final String baseUrl = '192.168.9.194'; // Replace with your API endpoint
+  // final String baseUrl = // Replace with your API endpoint
   final int port = 9000;
 
   // Fetch all units
@@ -17,13 +18,12 @@ class ApiService {
         path: '/api/getUnits',
         port: port,
       );
-
       log('GET $uri'); // Log the URI being called
       final response = await http.get(uri);
 
       log('Response Status: ${response.statusCode}');
       log('Response Body: ${response.body}');
-
+      print('response ${response.statusCode}, ${response.body}');
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = json.decode(response.body);
         final List<dynamic> categoriesData = responseData['units'];
@@ -68,7 +68,7 @@ class ApiService {
   }
 
   // Update an existing unit
-  Future<void> updateUnit(String id, Unit unit) async {
+  Future<bool> updateUnit(String id, Unit unit) async {
     try {
       final Uri uri = Uri(
         host: baseUrl,
@@ -89,18 +89,18 @@ class ApiService {
       log('Response Status: ${response.statusCode}');
       log('Response Body: ${response.body}');
 
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Failed to update unit. Server returned: ${response.body}');
+      if (response.statusCode == 201) {
+        return true;
+      } else {
+        return false;
       }
     } catch (e) {
-      log('Error updating unit: $e');
-      rethrow;
+      return false;
     }
   }
 
   // Delete a unit
-  Future<void> deleteUnit(String id) async {
+  Future<bool> deleteUnit(String id) async {
     try {
       final Uri uri = Uri(
         host: baseUrl,
@@ -115,13 +115,13 @@ class ApiService {
       log('Response Status: ${response.statusCode}');
       log('Response Body: ${response.body}');
 
-      if (response.statusCode != 200) {
-        throw Exception(
-            'Failed to delete unit. Server returned: ${response.body}');
+      if (response.statusCode == 201) {
+        return true;
+      } else {
+        return false;
       }
     } catch (e) {
-      log('Error deleting unit: $e');
-      rethrow;
+      return false;
     }
   }
 }
